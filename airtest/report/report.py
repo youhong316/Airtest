@@ -191,9 +191,9 @@ class LogToHtml(object):
                     if not os.path.isfile(os.path.join(self.script_root, image_path)):
                         shutil.copy(value['_filepath'], self.script_root)  # copy image used by using statement
                 else:
-                    image_path = os.path.abspath(value['_filepath'])
+                    image_path = os.path.abspath(value['_filepath'] or value['filename'])
                 arg["image"] = image_path
-                crop_img = imread(value['_filepath'])
+                crop_img = imread(value['_filepath'] or value['filename'])
                 arg["resolution"] = get_resolution(crop_img)
         return code
 
@@ -290,9 +290,9 @@ class LogToHtml(object):
     def is_pos(self, v):
         return isinstance(v, (list, tuple))
 
-    def copy_tree(self, src, dst):
+    def copy_tree(self, src, dst, ignore=None):
         try:
-            shutil.copytree(src, dst)
+            shutil.copytree(src, dst, ignore=ignore)
         except Exception as e:
             print(e)
 
@@ -310,10 +310,11 @@ class LogToHtml(object):
         if os.path.normpath(logpath) != os.path.normpath(self.log_root):
             if os.path.isdir(logpath):
                 shutil.rmtree(logpath, ignore_errors=True)
-            self.copy_tree(self.log_root, logpath)
-        # copy static files
-        for subdir in ["css", "fonts", "image", "js"]:
-            self.copy_tree(os.path.join(STATIC_DIR, subdir), os.path.join(dirpath, "static", subdir))
+            self.copy_tree(self.log_root, logpath, ignore=shutil.ignore_patterns(dirname))
+        # if self.static_root is not a http server address, copy static files from local directory
+        if not self.static_root.startswith("http"):
+            for subdir in ["css", "fonts", "image", "js"]:
+                self.copy_tree(os.path.join(self.static_root, subdir), os.path.join(dirpath, "static", subdir))
 
         return dirpath, logpath
 
@@ -325,11 +326,13 @@ class LogToHtml(object):
         if self.export_dir:
             self.script_root, self.log_root = self._make_export_dir()
             output_file = os.path.join(self.script_root, HTML_FILE)
-            self.static_root = "static/"
+            if not self.static_root.startswith("http"):
+                self.static_root = "static/"
 
         if not record_list:
             record_list = [f for f in os.listdir(self.log_root) if f.endswith(".mp4")]
-        records = [os.path.join(self.log_root, f) for f in record_list]
+        records = [os.path.join(LOGDIR, f) if self.export_dir
+                   else os.path.abspath(os.path.join(self.log_root, f)) for f in record_list]
 
         if not self.static_root.endswith(os.path.sep):
             self.static_root = self.static_root.replace("\\", "/")
@@ -350,7 +353,7 @@ class LogToHtml(object):
         return self._render(template_name, output_file, **data)
 
 
-def simple_report(logpath, tplpath=".", logfile=LOGFILE, output=HTML_FILE):
+def simple_report(logpath, tplpath, logfile=LOGFILE, output=HTML_FILE):
     rpt = LogToHtml(tplpath, logpath, logfile=logfile)
     rpt.report(HTML_TPL, output_file=output)
 

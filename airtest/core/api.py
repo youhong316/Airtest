@@ -205,16 +205,14 @@ def snapshot(filename=None, msg=""):
     :return: absolute path of the screenshot
     :platforms: Android, iOS, Windows
     """
-    if not filename:
-        filename = "%(time)d.jpg" % {'time': time.time() * 1000}
-    if not os.path.isabs(filename):
-        logdir = ST.LOG_DIR or "."
-        filepath = os.path.join(logdir, filename)
+    if filename:
+        if not os.path.isabs(filename):
+            logdir = ST.LOG_DIR or "."
+            filename = os.path.join(logdir, filename)
+        screen = G.DEVICE.snapshot(filename)
+        return try_log_screen(screen)
     else:
-        filepath = filename
-    screen = G.DEVICE.snapshot(filepath)
-    try_log_screen(screen)
-    return filepath
+        return try_log_screen()
 
 
 @logwrap
@@ -354,7 +352,7 @@ def keyevent(keyname, **kwargs):
 
 
 @logwrap
-def text(text, enter=True):
+def text(text, enter=True, **kwargs):
     """
     Input text on the target device. Text input widget must be active first.
 
@@ -363,7 +361,7 @@ def text(text, enter=True):
     :return: None
     :platforms: Android, Windows, iOS
     """
-    G.DEVICE.text(text, enter=enter)
+    G.DEVICE.text(text, enter=enter, **kwargs)
     delay_after_operation()
 
 

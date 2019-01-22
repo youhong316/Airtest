@@ -590,11 +590,10 @@ class ADB(object):
         try:
             out = self.cmd(cmds)
         except AdbError as err:
-            if "UNSUPPORTED" in err.stderr or "Failed to create session" in err.stderr:
-                return self.install_app(filepath, replace)
-            elif "Failed to finalize session" in err.stderr:
+            if "Failed to finalize session".lower() in err.stderr.lower():
                 return "Success"
-            raise err
+            else:
+                return self.install_app(filepath, replace)
 
         if re.search(r"Failure \[.*?\]", out):
             print(out)
@@ -1004,9 +1003,10 @@ class ADB(object):
         """
         dat = self.shell('dumpsys activity top')
         activityRE = re.compile('\s*ACTIVITY ([A-Za-z0-9_.]+)/([A-Za-z0-9_.]+) \w+ pid=(\d+)')
-        m = activityRE.search(dat)
+        # in Android8.0 or higher, the result may be more than one
+        m = activityRE.findall(dat)
         if m:
-            return (m.group(1), m.group(2), m.group(3))
+            return m[-1]
         else:
             raise AirtestError("Can not get top activity, output:%s" % dat)
 
@@ -1202,7 +1202,7 @@ class ADB(object):
         if not re.search(r"Status:\s*ok", out):
             raise AirtestError("Starting App: %s/%s Failed!" % (package, activity))
 
-        matcher = re.search(r"TotalTime:\s*(\d+)", out)
+        matcher = re.search(r"ThisTime:\s*(\d+)", out)
         if matcher:
             return int(matcher.group(1))
         else:

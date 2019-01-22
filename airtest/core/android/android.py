@@ -292,22 +292,29 @@ class Android(Device):
         """
         self.keyevent("HOME")
 
-    def text(self, text, enter=True):
+    def text(self, text, enter=True, **kwargs):
         """
         Input text on the device
 
         Args:
             text: text to input
             enter: True or False whether to press `Enter` key
+            search: True or False whether to press `Search` key on IME after input
 
         Returns:
             None
 
         """
+        search = False if "search" not in kwargs else kwargs["search"]
+
         if self.ime_method == IME_METHOD.YOSEMITEIME:
             self.yosemite_ime.text(text)
         else:
             self.adb.shell(["input", "text", text])
+
+        if search:
+            self.yosemite_ime.code("3")
+            return
 
         # 游戏输入时，输入有效内容后点击Enter确认，如不需要，enter置为False即可。
         if enter:

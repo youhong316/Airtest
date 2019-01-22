@@ -65,6 +65,9 @@ class Windows(Device):
             self.app = self._app.connect(handle=handle)
             self._top_window = self.app.window(handle=handle).wrapper_object()
         else:
+            for k in ["process", "timeout"]:
+                if k in kwargs:
+                    kwargs[k] = int(kwargs[k])
             self.app = self._app.connect(**kwargs)
             self._top_window = self.app.top_window().wrapper_object()
         self.set_foreground()
@@ -85,19 +88,17 @@ class Windows(Device):
         """
         return subprocess.check_output(cmd, shell=True)
 
-    def snapshot(self, filename="tmp.png"):
+    def snapshot(self, filename=None):
         """
-        Take a screenshot and save it to `tmp.png` filename by default
+        Take a screenshot and save it in ST.LOG_DIR folder
 
         Args:
-            filename: name of file where to store the screenshot
+            filename: name of the file to give to the screenshot, {time}.jpg by default
 
         Returns:
             display the screenshot
 
         """
-        if not filename:
-            filename = "tmp.png"
         if self.handle:
             screen = screenshot(filename, self.handle)
         else:
